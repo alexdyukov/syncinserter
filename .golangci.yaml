@@ -1,0 +1,26 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - depguard
+    - lll
+    - wrapcheck
+    - gochecknoglobals
+    - gomoddirectives # used local replace to run tests and benchmarks for local code
+    - forcetypeassert
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - goimports
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
+  new: false
+  fix: false
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  tests: false
