@@ -17,6 +17,8 @@ jobs:
 
       - name: Checkout git repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run tests
         run: go test -v -coverprofile coverage.out ./...
