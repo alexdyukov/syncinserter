@@ -1,0 +1,27 @@
+name: release
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Checkout git repository
+        uses: actions/checkout@v4
+
+      - name: Update coverage report
+        uses: ncruces/go-coverage-report@v0
+
+      - name: Tag latest release on github
+        run: bash .github/tag_release.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
