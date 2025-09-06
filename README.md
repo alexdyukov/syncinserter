@@ -1,9 +1,9 @@
 # syncinserter
 syncinserter is a go package which provides abstraction to merge concurrency inserts into batch insert.
 ====
-[![GoDoc](https://godoc.org/github.com/alexdyukov/syncinserter?status.svg)](https://godoc.org/github.com/alexdyukov/syncinserter)
-[![Tests](https://github.com/alexdyukov/syncinserter/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/alexdyukov/ratelimiter/actions/workflows/test.yml?query=branch%3Amaster)
-[![Coverage](https://github.com/alexdyukov/syncinserter/wiki/coverage.svg)](https://raw.githack.com/wiki/alexdyukov/syncinserter/coverage.html)
+[![Go Reference](https://pkg.go.dev/badge/image)](https://pkg.go.dev/github.com/alexdyukov/syncinserter)
+[![Go Report](https://goreportcard.com/badge/github.com/alexdyukov/syncinserter)](https://goreportcard.com/report/github.com/alexdyukov/syncinserter)
+[![Go Coverage](https://github.com/alexdyukov/syncinserter/wiki/coverage.svg)](https://raw.githack.com/wiki/alexdyukov/syncinserter/coverage.html)
 
 ## benchmarks
 ```

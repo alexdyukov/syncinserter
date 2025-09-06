@@ -18,8 +18,15 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v4
 
-      - name: Update coverage report
-        uses: ncruces/go-coverage-report@v0
+      - name: Run tests
+        run: go test -v -coverprofile coverage.out ./...
+
+      - name: Update coverage badge
+        uses: ncruces/go-coverage-report@main
+        with:
+          coverage-file: coverage.out
+          reuse-go: true
+          amend: true
 
       - name: Tag latest release on github
         run: bash .github/tag_release.sh
