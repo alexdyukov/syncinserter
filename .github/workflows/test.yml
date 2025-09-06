@@ -1,0 +1,25 @@
+name: test
+
+on:
+  push:
+    branches-ignore:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Checkout git repository
+        uses: actions/checkout@v4
+
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v7
+
+      - name: Run tests
+        run: go test -v -coverprofile ./...
