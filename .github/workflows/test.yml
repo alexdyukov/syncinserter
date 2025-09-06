@@ -1,9 +1,6 @@
 name: test
 
-on:
-  push:
-    branches-ignore:
-      - master
+on: push
 
 jobs:
   test:
@@ -18,8 +15,8 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v4
 
-      - name: Run linters
-        uses: golangci/golangci-lint-action@v7
-
       - name: Run tests
         run: go test -v -coverprofile ./...
+
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v7
