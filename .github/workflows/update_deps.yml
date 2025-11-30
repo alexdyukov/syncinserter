@@ -12,16 +12,16 @@ jobs:
         shell: bash
     steps:
       - name: Install golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 'stable'
           check-latest: true
-
       - name: Checkout git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
+      - name: Install dependencies
+        run: go install golang.org/x/perf/cmd/benchstat@latest
       - name: Commit changes and create PR if we have any changes
         run: bash .github/update_deps.sh
         env:
