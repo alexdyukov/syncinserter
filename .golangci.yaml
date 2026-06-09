@@ -1,4 +1,20 @@
 version: "2"
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  tests: false
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
+  new: false
+  fix: false
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - goimports
 linters:
   default: all
   disable:
@@ -8,19 +24,3 @@ linters:
     - gochecknoglobals
     - gomoddirectives # used local replace to run tests and benchmarks for local code
     - forcetypeassert
-formatters:
-  enable:
-    - gci
-    - gofumpt
-    - goimports
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  uniq-by-line: false
-  new: false
-  fix: false
-run:
-  timeout: 5m
-  modules-download-mode: readonly
-  allow-parallel-runners: true
-  tests: false

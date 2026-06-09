@@ -6,31 +6,31 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/alexdyukov/syncinserter"
+	"github.com/gocql/gocql"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
-	clickhouseContainer "github.com/testcontainers/testcontainers-go/modules/clickhouse"
-	postgresContainer "github.com/testcontainers/testcontainers-go/modules/postgres"
+	cassandraTestContainer "github.com/testcontainers/testcontainers-go/modules/cassandra"
+	clickhouseTestContainer "github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	postgresTestContainer "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/goleak"
 )
 
 const (
-	// for example visa processing 24,000 Transactions per Second and we do benchParallelism*GOMAXPROCS
+	// for example visa processing 24,000 Transactions per Second and we do benchParallelism*GOMAXPROCS.
 	benchParallelism = 10000
-	batchSize        = 1000
 )
 
-var (
-	uuids []string
-)
+var uuids []string
 
 func TestMain(m *testing.M) {
 	const uuidCount = 5000
@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 func TestInvalidParameters(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	insertFunc := func(rows [][]any) error { return nil }
+	insertFunc := func(_ [][]any) error { return nil }
 
 	_, err := syncinserter.New(t.Context(), insertFunc, 0, time.Duration(1))
 	if !errors.Is(err, syncinserter.ErrInvalidMaxBatchSize) {
@@ -66,7 +66,7 @@ func TestCanceledContextInsert(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	insertFunc := func(rows [][]any) error { return nil }
+	insertFunc := func(_ [][]any) error { return nil }
 
 	inserter, err := syncinserter.New(ctx, insertFunc, 1, time.Duration(1))
 	if err != nil {
@@ -90,7 +90,7 @@ func TestSyncInserter(t *testing.T) {
 
 	testName := strings.ToLower(t.Name())
 
-	container, err := postgresContainer.Run(ctx, "postgres:latest", testcontainers.WithName(testName), testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")))
+	container, err := postgresTestContainer.Run(ctx, "postgres:latest", testcontainers.WithName(testName), testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")))
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -130,6 +130,8 @@ func TestSyncInserter(t *testing.T) {
 		return err
 	}
 
+	const batchSize = 1000
+
 	inserter, err := syncinserter.New(ctx, insertFunc, batchSize, time.Duration(1))
 	if err != nil {
 		t.Fatal(err.Error())
@@ -156,15 +158,44 @@ func TestSyncInserter(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if !(insertedCreatedAt).Equal(selectedCreatedAt) || math.Abs(insertedValue-selectedValue) > 0.0001 {
+	if !insertedCreatedAt.Equal(selectedCreatedAt) || math.Abs(insertedValue-selectedValue) > 0.0001 {
 		t.Fatalf("invalid data in %s: want %v, %v but got %v, %v", testName, insertedCreatedAt, insertedValue, selectedCreatedAt, selectedValue)
 	}
+}
+
+func BenchmarkOverhead(b *testing.B) {
+	// https://github.com/testcontainers/testcontainers-go/issues/2878
+	// defer goleak.VerifyNone(b)
+	b.StopTimer()
+
+	ctx, cancel := context.WithCancel(b.Context())
+	defer cancel()
+
+	insertFunc := func(rows [][]any) error { return nil }
+
+	const batchSize = 1000
+
+	inserter, err := syncinserter.New(ctx, insertFunc, batchSize, time.Duration(1))
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	b.SetParallelism(benchParallelism)
+	b.StartTimer()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			err = inserter.Insert(ctx, []any{})
+			if err != nil {
+				b.Fatal(err.Error())
+			}
+		}
+	})
 }
 
 func BenchmarkPostgres(b *testing.B) {
 	// https://github.com/testcontainers/testcontainers-go/issues/2878
 	// defer goleak.VerifyNone(b)
-
 	b.StopTimer()
 
 	ctx, cancel := context.WithCancel(b.Context())
@@ -172,7 +203,12 @@ func BenchmarkPostgres(b *testing.B) {
 
 	testName := strings.ToLower(b.Name())
 
-	container, err := postgresContainer.Run(ctx, "postgres:latest", testcontainers.WithName(testName), testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")))
+	container, err := postgresTestContainer.Run(
+		ctx,
+		"postgres:latest",
+		testcontainers.WithName(testName),
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")),
+	)
 	if err != nil {
 		b.Fatal(err.Error())
 	}
@@ -212,6 +248,8 @@ func BenchmarkPostgres(b *testing.B) {
 		return err
 	}
 
+	const batchSize = 1000
+
 	inserter, err := syncinserter.New(ctx, insertFunc, batchSize, time.Duration(1))
 	if err != nil {
 		b.Fatal(err.Error())
@@ -233,7 +271,6 @@ func BenchmarkPostgres(b *testing.B) {
 func BenchmarkClickhouse(b *testing.B) {
 	// https://github.com/testcontainers/testcontainers-go/issues/2878
 	// defer goleak.VerifyNone(b)
-
 	b.StopTimer()
 
 	ctx, cancel := context.WithCancel(b.Context())
@@ -241,8 +278,13 @@ func BenchmarkClickhouse(b *testing.B) {
 
 	testName := strings.ToLower(b.Name())
 
-	container, err := clickhouseContainer.Run(ctx, "clickhouse/clickhouse-server:latest", testcontainers.WithName(testName), clickhouseContainer.WithUsername(testName), clickhouseContainer.WithPassword(testName))
-
+	container, err := clickhouseTestContainer.Run(
+		ctx,
+		"clickhouse/clickhouse-server:latest",
+		testcontainers.WithName(testName),
+		clickhouseTestContainer.WithUsername(testName),
+		clickhouseTestContainer.WithPassword(testName),
+	)
 	if err != nil {
 		b.Fatal(err.Error())
 	}
@@ -281,6 +323,7 @@ func BenchmarkClickhouse(b *testing.B) {
 		if err != nil {
 			return err
 		}
+		defer batch.Close()
 
 		for _, row := range rows {
 			err = batch.Append(row...)
@@ -291,6 +334,11 @@ func BenchmarkClickhouse(b *testing.B) {
 
 		return batch.Send()
 	}
+
+	// https://clickhouse.com/docs/optimize/bulk-inserts
+	// We recommend inserting data in batches of at least 1,000 rows, and ideally between 10,000–100,000 rows.
+	// Fewer, larger inserts reduce the number of parts written, minimize merge load, and lower overall system resource usage.
+	const batchSize = 10000
 
 	inserter, err := syncinserter.New(ctx, insertFunc, batchSize, time.Duration(1))
 	if err != nil {
@@ -310,16 +358,64 @@ func BenchmarkClickhouse(b *testing.B) {
 	})
 }
 
-func BenchmarkOverhead(b *testing.B) {
+func BenchmarkCassandra(b *testing.B) {
 	// https://github.com/testcontainers/testcontainers-go/issues/2878
 	// defer goleak.VerifyNone(b)
-
 	b.StopTimer()
 
 	ctx, cancel := context.WithCancel(b.Context())
 	defer cancel()
 
-	insertFunc := func(rows [][]any) error { return nil }
+	testName := strings.ToLower(b.Name())
+
+	container, err := cassandraTestContainer.Run(
+		ctx,
+		"cassandra:latest",
+		testcontainers.WithName(testName),
+		cassandraTestContainer.WithInitScripts(filepath.Join("testdata", "cassandra_init.cql")),
+	)
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	defer container.Terminate(ctx)
+
+	connHost, err := container.ConnectionHost(ctx)
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	connConfig := gocql.NewCluster(connHost)
+	connConfig.Keyspace = "testkeyspace"
+
+	session, err := connConfig.CreateSession()
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	defer session.Close()
+
+	session.Closed()
+
+	err = session.Query(`CREATE TABLE IF NOT EXISTS ` + testName + ` (created_at TIMESTAMP, usr UUID, diff DOUBLE, PRIMARY KEY (created_at, usr));`).Exec()
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+
+	insertFunc := func(rows [][]any) error {
+		batch := session.NewBatch(gocql.LoggedBatch)
+
+		insertStr := `INSERT INTO ` + testName + ` (created_at, usr, diff) VALUES (?, ?, ?)`
+
+		for _, row := range rows {
+			batch.Query(insertStr, row...)
+		}
+
+		return session.ExecuteBatch(batch)
+	}
+
+	// Batch too large for 1000+
+	const batchSize = 500
 
 	inserter, err := syncinserter.New(ctx, insertFunc, batchSize, time.Duration(1))
 	if err != nil {
@@ -331,7 +427,7 @@ func BenchmarkOverhead(b *testing.B) {
 
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			err = inserter.Insert(ctx, []any{})
+			err = inserter.Insert(ctx, []any{time.Now(), uuids[rand.Intn(len(uuids))], rand.Float64()})
 			if err != nil {
 				b.Fatal(err.Error())
 			}
