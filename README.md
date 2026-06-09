@@ -8,16 +8,17 @@ syncinserter is a go package which provides abstraction to merge concurrency ins
 ## benchmarks
 ```
 $ go clean -testcache && go test ./... && go test -timeout 5m -bench=. -benchtime=1000000x -benchmem ./...
-ok      github.com/alexdyukov/syncinserter      4.476s
+ok      github.com/alexdyukov/syncinserter      4.538s
 goos: linux
 goarch: amd64
 pkg: github.com/alexdyukov/syncinserter
 cpu: AMD Ryzen 7 8845H w/ Radeon 780M Graphics
-BenchmarkPostgres-16             1000000             13897 ns/op             973 B/op         23 allocs/op
-BenchmarkClickhouse-16           1000000             24904 ns/op             307 B/op          5 allocs/op
-BenchmarkOverhead-16             1000000              5258 ns/op              73 B/op          0 allocs/op
+BenchmarkOverhead-16             1000000              6144 ns/op             156 B/op          1 allocs/op
+BenchmarkPostgres-16             1000000             14973 ns/op             898 B/op         23 allocs/op
+BenchmarkClickhouse-16           1000000             19956 ns/op             311 B/op          4 allocs/op
+BenchmarkCassandra-16            1000000             33201 ns/op            1081 B/op         11 allocs/op
 PASS
-ok      github.com/alexdyukov/syncinserter      69.565s
+ok      github.com/alexdyukov/syncinserter      128.664s
 ```
 
 ## License
