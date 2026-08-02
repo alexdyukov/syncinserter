@@ -1,6 +1,6 @@
 # Its looks like semver, but its not, because we cannot release patch on prev major.minor release
-MAJOR_VERSION=1
-MAJOR_LAST_COMMIT_HASH="ec3580db4be82b5147b239e68f182ed4feb46b65"
+MAJOR_VERSION=2
+MAJOR_LAST_COMMIT_HASH="cd2072f9aa5055970594fac18527cb2f6900a091"
 
 MINOR_LAST_COMMIT_HASH=$(git rev-list --invert-grep -i --grep='fix' ${MAJOR_LAST_COMMIT_HASH}..HEAD --no-merges -n 1)
 MINOR_VERSION=$(git rev-list --invert-grep -i --grep='fix' ${MAJOR_LAST_COMMIT_HASH}..HEAD --no-merges --count)
