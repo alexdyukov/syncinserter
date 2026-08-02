@@ -21,22 +21,23 @@ var (
 )
 
 type (
-	queueElement struct {
+	queueElement[Row any] struct {
 		notifyCh chan error
-		row      []any
+		row      Row
 	}
 
 	// SyncInserter is bulk inserter with sync Insert API. It merges all Insert calls during period and merges them in one batch call.
-	SyncInserter struct {
+	SyncInserter[Row any] struct {
+		maxBatchSize    int
+		batchInsertFunc func(rows []Row) error
+		queue           chan queueElement[Row]
+		rowsBuffer      []Row
 		notifiesBuffer  []chan error
-		rowsBuffer      [][]any
-		batchInsertFunc func(rows [][]any) error
-		queue           chan queueElement
 	}
 )
 
 // New initializes SyncInserter.
-func New(ctx context.Context, batchInsertFunc func(rows [][]any) error, maxBatchSize int, period time.Duration) (*SyncInserter, error) {
+func New[Row any](ctx context.Context, batchInsertFunc func(rows []Row) error, maxBatchSize int, period time.Duration) (*SyncInserter[Row], error) {
 	if maxBatchSize <= 0 {
 		return nil, ErrInvalidMaxBatchSize
 	}
@@ -45,11 +46,12 @@ func New(ctx context.Context, batchInsertFunc func(rows [][]any) error, maxBatch
 		return nil, ErrInvalidPeriod
 	}
 
-	syncInserter := &SyncInserter{
+	syncInserter := &SyncInserter[Row]{
+		maxBatchSize:    maxBatchSize,
 		batchInsertFunc: batchInsertFunc,
-		queue:           make(chan queueElement),
+		queue:           make(chan queueElement[Row]),
+		rowsBuffer:      make([]Row, 0, maxBatchSize),
 		notifiesBuffer:  make([]chan error, 0, maxBatchSize),
-		rowsBuffer:      make([][]any, 0, maxBatchSize),
 	}
 
 	go func() {
@@ -72,19 +74,19 @@ func New(ctx context.Context, batchInsertFunc func(rows [][]any) error, maxBatch
 }
 
 // Insert adds a row to the current batch and blocks until context canceled or the batch is processed.
-func (syncInserter *SyncInserter) Insert(ctx context.Context, row []any) error {
+func (syncInserter *SyncInserter[Row]) Insert(ctx context.Context, row Row) error {
 	notifyCh := notifyChannelPool.Get().(chan error)
 	defer notifyChannelPool.Put(notifyCh)
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case syncInserter.queue <- queueElement{row: row, notifyCh: notifyCh}:
+	case syncInserter.queue <- queueElement[Row]{row: row, notifyCh: notifyCh}:
 		return <-notifyCh
 	}
 }
 
-func (syncInserter *SyncInserter) send() {
+func (syncInserter *SyncInserter[Row]) send() {
 	for empty := false; len(syncInserter.rowsBuffer) < cap(syncInserter.rowsBuffer) && !empty; {
 		select {
 		case element := <-syncInserter.queue:
@@ -105,6 +107,6 @@ func (syncInserter *SyncInserter) send() {
 		notifyCh <- err
 	}
 
-	syncInserter.notifiesBuffer = syncInserter.notifiesBuffer[:0]
 	syncInserter.rowsBuffer = syncInserter.rowsBuffer[:0]
+	syncInserter.notifiesBuffer = syncInserter.notifiesBuffer[:0]
 }
