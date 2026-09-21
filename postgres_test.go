@@ -51,6 +51,7 @@ func preparePostgres(t test) (*pgxpool.Pool, func(), error) {
 
 	cleanup = func() {
 		conn.Close()
+
 		_ = container.Terminate(context.Background())
 	}
 
@@ -74,6 +75,7 @@ func BenchmarkPostgresDirectInsert(b *testing.B) {
 			sqlQuery := `INSERT INTO test (created_at, usr, diff) VALUES ($1, $2, $3);`
 
 			sb.SetParallelism(parallelism)
+
 			sb.StartTimer()
 			defer sb.StopTimer()
 
@@ -114,6 +116,7 @@ func BenchmarkPostgresWrappedCopyFrom(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 
@@ -162,6 +165,7 @@ func BenchmarkPostgresWrappedMultiline(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 

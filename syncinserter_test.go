@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	testcontainersLog "github.com/testcontainers/testcontainers-go/log"
-
 	"go.uber.org/goleak"
 )
 

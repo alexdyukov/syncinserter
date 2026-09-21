@@ -9,7 +9,6 @@ import (
 
 	"github.com/alexdyukov/syncinserter/v2"
 	"github.com/gocql/gocql"
-
 	"github.com/testcontainers/testcontainers-go"
 	scylladbTestContainer "github.com/testcontainers/testcontainers-go/modules/scylladb"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -70,6 +69,7 @@ func prepareScyllaDB(t test) (*gocql.Session, func(), error) {
 
 	cleanup = func() {
 		conn.Close()
+
 		_ = container.Terminate(context.Background())
 	}
 
@@ -94,6 +94,7 @@ func BenchmarkScyllaDBDirectInsert(b *testing.B) {
 			sqlQuery := `INSERT INTO test (created_at, usr, diff) VALUES (?, ?, ?);`
 
 			sb.SetParallelism(parallelism)
+
 			sb.StartTimer()
 			defer sb.StopTimer()
 
@@ -102,6 +103,7 @@ func BenchmarkScyllaDBDirectInsert(b *testing.B) {
 					q := conn.Query(sqlQuery, time.Now().UTC(), uuids[rand.Intn(len(uuids))].String(), rand.Float64())
 					err = q.Exec()
 					q.Release()
+
 					if err != nil {
 						sb.Fatal(err.Error())
 					}
@@ -142,6 +144,7 @@ func BenchmarkScyllaDBWrappedBatch(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 
