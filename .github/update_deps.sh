@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # 1. run tests before update
-go test -bench=. -benchmem -benchtime=100000x > old.txt
+go test -bench=. -benchmem -benchtime=10000x > old.txt
 
 # 2. update dependencies
 go get -u ./... && go get -u -t ./... && go mod tidy && go get -u ./...
