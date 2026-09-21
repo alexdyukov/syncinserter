@@ -10,7 +10,6 @@ import (
 	"github.com/alexdyukov/syncinserter/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	cockroachDBTestContainer "github.com/testcontainers/testcontainers-go/modules/cockroachdb"
 )
 
@@ -25,7 +24,6 @@ func prepareCockroachDB(t test) (*pgxpool.Pool, func(), error) {
 		cockroachDBTestContainer.WithInsecure(),
 	)
 	if err != nil {
-		fmt.Println(1)
 		return nil, cleanup, err
 	}
 
@@ -35,13 +33,11 @@ func prepareCockroachDB(t test) (*pgxpool.Pool, func(), error) {
 
 	connConfig, err := container.ConnectionConfig(t.Context())
 	if err != nil {
-		fmt.Println(2)
 		return nil, cleanup, err
 	}
 
 	config, err := pgxpool.ParseConfig(connConfig.ConnString())
 	if err != nil {
-		fmt.Println(3)
 		return nil, cleanup, err
 	}
 
@@ -55,6 +51,7 @@ func prepareCockroachDB(t test) (*pgxpool.Pool, func(), error) {
 
 	cleanup = func() {
 		conn.Close()
+
 		_ = container.Terminate(context.Background())
 	}
 
@@ -78,6 +75,7 @@ func BenchmarkCockroachDBDirectInsert(b *testing.B) {
 			sqlQuery := `INSERT INTO test (created_at, usr, diff) VALUES ($1, $2, $3);`
 
 			sb.SetParallelism(parallelism)
+
 			sb.StartTimer()
 			defer sb.StopTimer()
 
@@ -125,6 +123,7 @@ func BenchmarkCockroachDBWrappedMultiline(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 

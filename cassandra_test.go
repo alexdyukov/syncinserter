@@ -68,6 +68,7 @@ func prepareCassandra(t test) (*gocql.Session, func(), error) {
 
 	cleanup = func() {
 		conn.Close()
+
 		_ = container.Terminate(context.Background())
 	}
 
@@ -91,6 +92,7 @@ func BenchmarkCassandraDirectInsert(b *testing.B) {
 			sqlQuery := `INSERT INTO test (created_at, usr, diff) VALUES (?, ?, ?);`
 
 			sb.SetParallelism(parallelism)
+
 			sb.StartTimer()
 			defer sb.StopTimer()
 
@@ -99,6 +101,7 @@ func BenchmarkCassandraDirectInsert(b *testing.B) {
 					q := conn.Query(sqlQuery, time.Now().UTC(), uuids[rand.Intn(len(uuids))].String(), rand.Float64())
 					err = q.Exec()
 					q.Release()
+
 					if err != nil {
 						sb.Fatal(err.Error())
 					}
@@ -139,6 +142,7 @@ func BenchmarkCassandraWrappedBatch(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 

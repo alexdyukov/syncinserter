@@ -51,7 +51,6 @@ func prepareClickhouse(t test) (driver.Conn, func(), error) {
 
 	err = conn.Ping(t.Context())
 	if err != nil {
-		fmt.Println("1")
 		return nil, cleanup, err
 	}
 
@@ -80,6 +79,7 @@ func BenchmarkClickhouseDirectInsert(b *testing.B) {
 			sqlQuery := `INSERT INTO test (created_at, usr, diff) VALUES ($1, $2, $3);`
 
 			sb.SetParallelism(parallelism)
+
 			sb.StartTimer()
 			defer sb.StopTimer()
 
@@ -131,6 +131,7 @@ func BenchmarkClickhouseWrappedBatch(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 
@@ -177,6 +178,7 @@ func BenchmarkClickhouseWrappedMultiline(b *testing.B) {
 				}
 
 				sb.SetParallelism(parallelism)
+
 				sb.StartTimer()
 				defer sb.StopTimer()
 
